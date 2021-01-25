@@ -1,11 +1,8 @@
 const express = require('express');
-const cors = require('./cors');
-const authenticate = ('../authenticate');
-const Favorite = require('../models/favorite');
-const { RequestHeaderFieldsTooLarge } = require('http-errors');
-const { set } = require('mongoose');
-
 const favoriteRouter = express.Router();
+const authenticate = require('../authenticate');
+const Favorite = require('../models/favorite');
+const cors = require('./cors');
 
 favoriteRouter.route('/')
 .options(cors.corsWithOptions, (req, res) => res.sendStatus(200))
@@ -22,8 +19,8 @@ favoriteRouter.route('/')
 })
 .post(cors.corsWithOptions, authenticate.verifyUser, (req, res, next) => {
    Favorite.findOne({user: req.user._id})
-   .then(favorites => {
-       if (favorites) {
+   .then(favorite => {
+       if (favorite) {
            req.body.forEach(favoriteInstance => {
                if (!favorite.campsites.includes(favoriteInstance._id)) {
                    favorite.campsites.push(favoriteInstance._id);
@@ -33,7 +30,7 @@ favoriteRouter.route('/')
            .then(favorites => {
                res.statusCode = 200;
                res.setHeader('Content-Type', 'application/json');
-               res.json{favorites};
+               res.json(favorites);
            })
            .catch(err => next(err));
        } else {
@@ -99,10 +96,13 @@ favoriteRouter.route('/:campsiteId')
                             res.end;
                         }
             } else {
-                res.statusCode = 200;
-                res.setHeader ('Content-Type', 'text/plain');
-                res.end('That campsite is already in the list of favorites!');
-            }
+                Favorite.create({ user: req.user._id, campsites: [req.params.campsiteId] })
+                .then(favorite => {
+                    res.statusCode = 200;
+                    res.setHeader('Content-Type', 'application/json');
+                    res.json(favorite);
+                })
+                .catch(err => next(err));            }
         }
 )}
 ) 
@@ -115,11 +115,11 @@ favoriteRouter.route('/:campsiteId')
 .delete(cors.corsWithOptions, authenticate.verifyUser,  (req, res, next) => {
         Favorite.findOne({user: req.user._id})
         .then(favoritesIndex => {
-            if (favoritesIndex) {
-                if (favorites.campsites.include(req.params.campsiteId)) {
-                    favorite.campsites.indexOf(req.params.campsiteId);
-                    favorite.campsites.splice(req.params.campsiteId);
-                }
+                if (favoritesIndex) {
+                    const index = favoritesIndex.campsites.indexOf(req.params.campsiteId);
+                    if (index >= 0) {
+                        favoritesIndex.campsites.splice(index, 1);
+                    }
                 favoritesIndex.save()
                 .then(favoriteIndex => {
                     res.statusCode = 200;
@@ -128,15 +128,11 @@ favoriteRouter.route('/:campsiteId')
                 })
                 .catch(err => next(err));
             } else {
-                if (!favorites.campsites.includes(req.params.campsiteId)) {
                 res.statusCode = 200;
                 res.setHeader('Content-Type', 'application.json');
                 res.json(favoritesIndex);
                 }
-                }
-            })
-        })
-        .catch(err => next(err));
+            }) .catch(err => next(err));
+        });
     
-    
-model.exports = favoriteRouter;
+module.exports = favoriteRouter;
